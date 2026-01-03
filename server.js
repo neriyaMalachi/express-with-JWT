@@ -1,5 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
 const app = express();
 app.use(express.json());
@@ -8,12 +9,24 @@ const PORT = process.env.PORT || 8000;
 const SECRET = process.env.JWT_SECRET || "dev_secret";
 
 const users = [
-  { username: "dana", password: "1234", role: "student" },
-  { username: "lior", password: "1234", role: "teacher" },
-  { username: "admin", password: "1234", role: "admin" },
+  {
+    username: "dana",
+    passwordHash: bcrypt.hashSync("1234", 10),
+    role: "student",
+  },
+  {
+    username: "lior",
+    passwordHash: bcrypt.hashSync("1234", 10),
+    role: "teacher",
+  },
+  {
+    username: "admin",
+    passwordHash: bcrypt.hashSync("1234", 10),
+    role: "admin",
+  },
 ];
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -22,7 +35,13 @@ app.post("/login", (req, res) => {
 
   // חיפוש משתמש
   const user = users.find((u) => u.username === username);
-  if (!user || user.password !== password) {
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+  console.log(password,user.passwordHash);
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  
+  if (!isMatch) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
@@ -36,15 +55,14 @@ app.post("/login", (req, res) => {
 
 function getToken(req) {
   const auth = req.headers.authorization;
-  
+
   if (!auth) return null;
-  
+
   if (!auth.startsWith("Bearer ")) return null;
-  
+
   console.log(auth.slice("Bearer ".length));
   return auth.slice("Bearer ".length);
 }
-console.log();
 
 app.get("/profile", (req, res) => {
   const token = getToken(req);
@@ -53,7 +71,7 @@ app.get("/profile", (req, res) => {
   try {
     const data = jwt.verify(token, SECRET); // בודק חתימה + תוקף
     console.log(data);
-    
+
     res.json({ message: "Welcome!", user: data });
   } catch {
     res.status(401).json({ error: "Invalid/expired token" });
@@ -104,6 +122,3 @@ app.delete("/admin/delete-user/:username", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-
-
-
