@@ -44,6 +44,7 @@ function getToken(req) {
   console.log(auth.slice("Bearer ".length));
   return auth.slice("Bearer ".length);
 }
+console.log();
 
 app.get("/profile", (req, res) => {
   const token = getToken(req);
